@@ -13,16 +13,14 @@ title:  "Intel VT-rp with examples - Part 1. HLAT"
   - [Acknowledgement](#acknowledgement)
   - [Notes](#notes)
 
-This post introduces Intel VT-rp -- what it is, how it works and why it was invented, with a sample hypervisor and example scenarios.
+This post introduces Intel VT-rp -- what it is, how it works, and why it was invented, with [a sample hypervisor]((https://github.com/tandasat/Hello-VT-rp)) and example scenarios. This is the first part of a 2 posts-series, focusing on Hypervisor-managed Linear Address Translation, HLAT, one of the features VT-rp provides.
 
-This is this first part of a 2 posts-series. This post focuses on Hypervisor-managed Linear Address Translation, HLAT, one of features VT-rp provides. For another features and writing code to use VT-rp, stay turned for the part 2, or check out source code of the [sample hypervisor at Github](https://github.com/tandasat/Hello-VT-rp).
-
-We use Windows as an example environment to discuss exploitation techniques and scenarios, but the same principal is applicable to any other operating systems.
+We use Windows as an example environment to discuss exploitation techniques and scenarios, but the same principle applies to any other operating system.
 
 
 ## Security enhancement with extended page tables
 
-_(Skip this section if you are familiar with EPT, HVCI and KDP)_
+_(Skip this section if you are familiar with EPT, HVCI, and KDP)_
 
 Extended page table, EPT, is an Intel implementation of [Second Level Address Translation](https://en.wikipedia.org/wiki/Second_Level_Address_Translation), which allows a hypervisor to control memory access by a guest by adding one more address translation step that cannot be tampered with by the guest.
 
@@ -30,32 +28,32 @@ The below diagram illustrates how a linear address is translated into a physical
 ![](/blog/img/posts/2023-06-01/ept_paging.png)
 _(LA: linear address, GPA: guest physical address, PA: physical address)_
 
-Because a guest cannot tamper with this mechanism even with the kernel privileges, a hypervisor can use it to protect the OS kernel from a kernel-mode exploit by making sensitive kernel-mode code and data non-writable at the EPT level, for example. This way, even if an attacker gains arbitrary kernel-mode read and write primitives, she is unable to corrupt the sensitive code or data.
+Because a guest cannot tamper with this mechanism even with the kernel privileges, a hypervisor can use it to protect the OS kernel from a kernel-mode exploit by making sensitive kernel-mode code and data non-writable at the EPT level, for example. This way, even if an attacker gains arbitrary kernel-mode read and write primitives, she cannot to corrupt the sensitive code or data.
 
-This diagram shows that code remains to be non-writable even if an attacker changes the permission in the guest paging structures.
+This diagram shows that code remains non-writable even if an attacker changes the permission in the guest paging structures.
 ![](/blog/img/posts/2023-06-01/hvci.png)
 
 Windows implements this idea as features called HyperVisor-protected Code Integrity (HVCI) and Kernel Data Protection (KDP). HVCI makes kernel-mode code non-writable, and KDP makes kernel-mode data non-writable through EPT.
 
 ### Bypassing KDP by the remapping attack
 
-KDP can be bypassed if an attacker has a arbitrary kernel-mode read and write primitive by remapping the protected LA onto another GPA that is still configured to be writable at the EPT-level.
+KDP can be bypassed if an attacker has an arbitrary kernel-mode read and write primitive by remapping the protected LA onto another GPA that is still configured to be writable at the EPT level.
 
-The below illustration shows permissions of sensitive data protected by KDP.
+The below illustration shows permissions for sensitive data protected by KDP.
 ![](/blog/img/posts/2023-06-01/kdp.png)
 
-As shown below, to modify contents of the sensitive data, an attacker can (1) create a copy of the data, (2) modify  contents of the copy, then (3) update the guest paging structures of the protected LA to point to the modified copy. With this, (4) when the protected LA is read, the modified contents are read instead, effectively bypassing KDP. This method is [called "remapping"](https://kvmforum2020.sched.com/event/eE4F) or page swapping.
+As shown below, to modify the contents of the sensitive data, an attacker can (1) create a copy of the data, (2) modify the contents of the copy, then (3) update the guest paging structures of the protected LA to point to the modified copy. With this, (4) when the protected LA is read, the modified contents are read instead, bypassing KDP. This method is [called "remapping"](https://kvmforum2020.sched.com/event/eE4F) or page swapping.
 ![](/blog/img/posts/2023-06-01/remapping.png)
 
-This is a well understood limitation that is explicitly called out by Microsoft and further discussed [by](https://www.fortinet.com/blog/threat-research/driver-signature-enforcement-tampering) [several](https://datafarm-cybersecurity.medium.com/code-execution-against-windows-hvci-f617570e9df0) [others](https://lore.kernel.org/all/20230505152046.6575-1-mic@digikod.net/). Here is the quote from the [Microsoft article introducing KDP](https://www.microsoft.com/en-us/security/blog/2020/07/08/introducing-kernel-data-protection-a-new-platform-security-technology-for-preventing-data-corruption/).
+This is a well-understood limitation that is explicitly called out by Microsoft and further discussed [by](https://www.fortinet.com/blog/threat-research/driver-signature-enforcement-tampering) [several](https://datafarm-cybersecurity.medium.com/code-execution-against-windows-hvci-f617570e9df0) [others](https://lore.kernel.org/all/20230505152046.6575-1-mic@digikod.net/). Here is the quote from the [Microsoft article introducing KDP](https://www.microsoft.com/en-us/security/blog/2020/07/08/introducing-kernel-data-protection-a-new-platform-security-technology-for-preventing-data-corruption/).
 > _KDP does not enforce how the virtual address range mapping a protected region is translated._
 
 
 ### Demo - making `ci!g_CiOptions` zero under KDP
 
-Let us carry out the remapping attack and make `ci!g_CiOptions` zero. You can skip this section if you already have a good handle on the attack.
+_(Skip this section if you have a good handle on the remapping attack)_
 
-Here is the outline of the demo:
+Let us carry out the remapping attack and make `ci!g_CiOptions` zero. Here is the outline of the demo:
 
 1. Locate a linear address, guest physical address, and a PTE for `ci!g_CiOptions`
 2. Confirm that `ci!g_CiOptions` is non-zero
@@ -64,7 +62,7 @@ Here is the outline of the demo:
 5. Modify the PTE to translate the page into the zero-filled page
 6. Confirm that `ci!g_CiOptions` is zero
 
-We use `livekd` and `DBUtilDrv2.Sys`, one of vulnerable drivers that is not yet block-listed, on Windows build 10.0.22621.1848 on a 12th gen processor. Secure boot is disabled. HVCI and hypervisor-debugging are enabled.
+We use `livekd` and `DBUtilDrv2.Sys`, one of the vulnerable drivers that are not yet block-listed, on Windows build 10.0.22621.1848 on a 12th gen processor. Secure boot is disabled. HVCI and hypervisor-debugging are enabled.
 
 ![](/blog/img/posts/2023-06-01/msinfo32.png)
 
@@ -94,7 +92,7 @@ We use `livekd` and `DBUtilDrv2.Sys`, one of vulnerable drivers that is not yet 
 
 3. Confirm that `ci!g_CiOptions` is read-only in EPT
 
-    We break-into the target's Hyper-V from another machine, and dump EPT entries for the GPA using the [hvexts](https://github.com/tandasat/hvext) extension.
+    We break into the target's Hyper-V from another machine and dump EPT entries for the GPA using the [hvexts](https://github.com/tandasat/hvext) extension.
     ```
     hv+0x239e70:
     fffff844`49cd9e70 cc              int     3
@@ -166,7 +164,7 @@ Important to note that making `ci!g_CiOptions` zero under this setup (ie, HVCI e
 
 ## Intel VT-rp
 
-Preventing the remapping attack without substantial performance impact deemed unachievable. A hypervisor could make the guest paging structures read-only and inspect each write operation, but that incurs a non negligible performance impact due to frequent VM-exit. Hence, Intel came up with a processor extension branded as Intel VT-rp, redirect protection.
+Preventing the remapping attack without substantial performance impact is deemed unachievable. A hypervisor could make the guest paging structures read-only and inspect each write operation, but that incurs a non-negligible performance impact due to frequent VM-exit. Hence, Intel came up with a processor extension branded as Intel VT-rp, redirect protection.
 
 Intel VT-rp was introduced with the 12th generation and consists of three features:
 - HLAT: Hypervisor-managed Linear Address Translation
@@ -177,7 +175,7 @@ Although all of the three work together, we will focus on HLAT in this post sinc
 
 ### HLAT and the remapping attack
 
-Essentially, when HLAT is enabled, LA -> GPA translation may be done based on the hypervisor-managed paging structures as depicted below.
+In short, when HLAT is enabled, LA -> GPA translation may be done based on the hypervisor-managed paging structures as depicted below.
 ![](/blog/img/posts/2023-06-01/hlat.png)
 
 Normally, when LA -> GPA translation is needed, the processor reads CR3 and walks through the paging structures managed by the guest OS. On the other hand, with HLAT is enabled, the processor reads the HLATP (HLAT pointer) VMCS field and walks through another set of the paging structures managed by the hypervisor.
@@ -209,24 +207,24 @@ def should_do_hlat_paging(la):
 ```
 Notice that (1) when HLAT is enabled and the given LA is within a range specified by the HLAT prefix VMCS, (2) the processor locates PML4 through HLATP, instead of the guest CR3. (3) The layout of the hypervisor-managed paging structures and the process of HLAT paging is almost identical to the traditional paging structure and paging ([*2](#notes)).
 
-This makes the remapping attack no-op, because even if the guest-managed paging structures (or the guest CR3) is modified, those will not be used. LA -> GPA translation is done through the hypervisor-managed paging structures which remain to translate the LA to intended the GPA.
+This makes the remapping attack no-op, because even if the guest-managed paging structures (or the guest CR3) is modified, those will not be used. LA -> GPA translation is done through the hypervisor-managed paging structures which remain to translate the LA to the intended GPA.
 
 ![](/blog/img/posts/2023-06-01/hlat_vs_remapping.png)
 
 
 ### Demo - protecting `ci!g_CiOptions` with HLAT
 
-Let us test this with a custom hypervisor that enables HLAT. This demo consists of the following steps:
-1. Load the custom hypervisor and boot Windows on the top of it
+Let us test this with a [custom hypervisor that enables HLAT](https://github.com/tandasat/Hello-VT-rp). This demo consists of the following steps:
+1. Load the custom hypervisor and boot Windows on top of it
 2. Locate a linear address and a PTE for `ci!g_CiOptions`
 3. Activate HLAT and protect translation for `ci!g_CiOptions`
 4. Carry out the remapping attack and confirm `ci!g_CiOptions` remains to be unchanged
 
 We use the same setup except:
-- Hyper-V is not activated. Our custom hypervisor puts Windows onto the guest mode.
-- Only one logical processor is activated. This is only to simplify implementation of the custom hypervisor.
+- Hyper-V is not activated. Our custom hypervisor puts Windows into the guest mode.
+- Only one logical processor is activated. This is only to simplify the implementation of the custom hypervisor.
 
-1. Load the custom hypervisor and boot Windows on the top of it
+1. Load the custom hypervisor and boot Windows on top of it
 
     We boot into a UEFI shell, load the custom hypervisor and continue booting Windows. Windows will boot as a guest of our hypervisor.
     ![](/blog/img/posts/2023-06-01/uefi_shell.jpg)
@@ -281,11 +279,11 @@ AMD does not offer any equivalent features.
 
 ## Conclusion
 
-In this post, we looked into how EPT can be used to harden the OS kernel against attackers with arbitrary kernel-mode read write primitives, how the remapping attack bypasses one of such hardening mechanisms (eg, KDP), and how HLAT, one of features Intel VT-rp offers, prevents the attack.
+In this post, we looked into how EPT can be used to harden the OS kernel against attackers with arbitrary kernel-mode read write primitives, how the remapping attack bypasses one of such hardening mechanisms (eg, KDP), and how HLAT, one of the features Intel VT-rp offers, prevents the attack.
 
-Intel VT-rp is available on subset of 12th gen Intel processors and still not used by Hyper-V.
+Intel VT-rp is available on a subset of 12th+ gen Intel processors and is still not used by Hyper-V.
 
-Until HLAT is used and hardware supporting the feature becomes prevalent, the remapping attack will remain to be a relevant exploitation technique. Security software designers and attackers should keep it in mind when considering a use of EPT based data protection.
+Until HLAT is used and hardware supporting the feature becomes prevalent, the remapping attack will remain to be a relevant exploitation technique. Security software designers and attackers should keep it in mind when considering the use of EPT-based data protection.
 
 ### Acknowledgement
 
@@ -294,7 +292,7 @@ Until HLAT is used and hardware supporting the feature becomes prevalent, the re
 
 
 ### Notes
-*1: If you tamper with `ci.dll` in the VTL0 and force to load an unsinged driver, the secure kernel injects NMI and crashes the system. This is the call stack of that situation.
+*1: If you tamper with `ci.dll` in the VTL0 and force it to load an unsigned driver, the secure kernel injects NMI and crashes the system. This is the call stack of that situation.
 ```
 0: kd> k
  # Child-SP          RetAddr               Call Site
@@ -316,5 +314,5 @@ Until HLAT is used and hardware supporting the feature becomes prevalent, the re
 0f fffff989`6f8af7c0 fffff802`36fc44b7     nt!IopLoadDriver+0x24b
 ```
 
-*2: Only difference between traditional paging and HLAT paging is treatment of bit[11] in the paging structures called "Restart" bit. During HLAT paging, when this bit is encountered, HLAT paging is aborted and the traditional paging takes place as if HLAT was disabled. This allows enabling HLAT paging only for select pages as show below.
+*2: The only difference between traditional paging and HLAT paging is the treatment of bit[11] in the paging structures called “Restart” bit. During HLAT paging, when this bit is encountered, HLAT paging is aborted and the traditional paging takes place as if HLAT was disabled. This allows enabling HLAT paging only for select pages as shown below.
 ![](/blog/img/posts/2023-06-01/restart.png)
