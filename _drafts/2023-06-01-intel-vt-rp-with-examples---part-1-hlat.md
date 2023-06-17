@@ -13,7 +13,7 @@ title:  "Intel VT-rp with examples - Part 1. HLAT"
   - [Acknowledgement](#acknowledgement)
   - [Notes](#notes)
 
-This post introduces Intel VT-rp -- what it is, how it works, and why it was invented, with [a sample hypervisor]((https://github.com/tandasat/Hello-VT-rp)) and example scenarios. This is the first part of a 2 posts-series, focusing on Hypervisor-managed Linear Address Translation, HLAT, one of the features VT-rp provides.
+This post introduces Intel VT-rp -- what it is, how it works, and why it was invented, with [a sample hypervisor](https://github.com/tandasat/Hello-VT-rp) and example scenarios. This is the first part of a 2 posts-series, focusing on Hypervisor-managed Linear Address Translation, HLAT, one of the features VT-rp provides.
 
 We use Windows as an example environment to discuss exploitation techniques and scenarios, but the same principle applies to any other operating system.
 
