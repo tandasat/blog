@@ -9,6 +9,7 @@ title:  "Intel VT-rp with examples - Part 1. HLAT"
   - [HLAT and the remapping attack](#hlat-and-the-remapping-attack)
   - [Demo - protecting `ci!g_CiOptions` with HLAT](#demo---protecting-cig_cioptions-with-hlat)
   - [Availability](#availability)
+  - [Further applications](#further-applications)
 - [Conclusion](#conclusion)
   - [Acknowledgement](#acknowledgement)
   - [Notes](#notes)
@@ -34,6 +35,7 @@ This diagram shows that code remains non-writable even if an attacker changes th
 ![](/blog/img/posts/2023-06-01/hvci.png)
 
 Windows implements this idea as features called HyperVisor-protected Code Integrity (HVCI) and Kernel Data Protection (KDP). HVCI makes kernel-mode code non-writable, and KDP makes kernel-mode data non-writable through EPT.
+
 
 ### Bypassing KDP by the remapping attack
 
@@ -72,9 +74,9 @@ We use `livekd` and `DBUtilDrv2.Sys`, one of the vulnerable drivers that are not
     > livekd
     kd> !pte ci!g_cioptions
                                             VA fffff8024b082004
-    PXE at FFFFEE773B9DCF80    PPE at FFFFEE773B9F0048    PDE at FFFFEE773E0092C0    PTE at FFFFEE7C01258410
-    contains 000000048F70B063  contains 000000048F70C063  contains 000000048F71E063  contains 890000011CEAA121
-    pfn 48f70b    ---DA--KWEV  pfn 48f70c    ---DA--KWEV  pfn 48f71e    ---DA--KWEV  pfn 11ceaa    -G--A--KR-V
+        (...)    PTE at FFFFEE7C01258410
+        (...)    contains 890000011CEAA121
+        (...)    pfn 11ceaa    -G--A--KR-V
     ```
     - LA = `fffff8024b082004`
     - GPA = `11ceaa004`
@@ -99,9 +101,9 @@ We use `livekd` and `DBUtilDrv2.Sys`, one of the vulnerable drivers that are not
     hvext loaded. Execute !hvext_help [command] for help.
 
     kd> !pte 0x11ceaa000
-    PML4e at 0x11b8bb000  PDPTe at 0x11b8bf020  PDe at 0x11b7b1738    PTe at 0x11b49a550
-    contains 0x11b8bf507  contains 0x11b7b1507  contains 0x11b49a507  contains 0x1000011ceaa531
-    pfn 0x11b8bf U-XWR    pfn 0x11b7b1 U-XWR    pfn 0x11b49a U-XWR    pfn 0x11ceaa U---R
+        (...)    PTe at 0x11b49a550
+        (...)    contains 0x1000011ceaa531
+        (...)    pfn 0x11ceaa U---R
     ```
     Notice `U---R`, which indicates that the page is not writable at the EPT level.
 
@@ -173,6 +175,7 @@ Intel VT-rp was introduced with the 12th generation and consists of three featur
 
 Although all of the three work together, we will focus on HLAT in this post since it is the primary component to prevent the remapping attack. For the PW and VPW, stay tuned for the part 2.
 
+
 ### HLAT and the remapping attack
 
 In short, when HLAT is enabled, LA -> GPA translation may be done based on the hypervisor-managed paging structures as depicted below.
@@ -235,9 +238,9 @@ We use the same setup except:
     > livekd
     kd> !pte ci!g_cioptions
                                             VA fffff80227dd2004
-    PXE at FFFFF9FCFE7F3F80    PPE at FFFFF9FCFE7F0040    PDE at FFFFF9FCFE0089F0    PTE at FFFFF9FC0113EE90
-    contains 000000048F60B063  contains 000000048F60C063  contains 000000048F61F063  contains 89000004879D5963
-    pfn 48f60b    ---DA--KWEV  pfn 48f60c    ---DA--KWEV  pfn 48f61f    ---DA--KWEV  pfn 4879d5    -G-DA--KW-V
+        (...)    PTE at FFFFF9FC0113EE90
+        (...)    contains 89000004879D5963
+        (...)    pfn 4879d5    -G-DA--KW-V
     ```
     - LA = `fffff80227dd2004`
     - PTE at `fffff9fc0113ee90`
@@ -277,6 +280,20 @@ As to the software-side, as far as I am know, none of major hypervisors includin
 
 AMD does not offer any equivalent features.
 
+
+### Further applications
+
+Given the low availability of the feature, the remapping attack will remain a relevant exploitation technique, and it is worth mentioning the potential uses of the attack to bypass modern security constructs.
+
+For example,
+- Kernel-mode Code Flow Guard (CFG)
+  - Windows maintains a bitmap that indicates valid destinations of indirect calls. For CFG to be effective against kernel-mode exploits, this bitmap is write-protected through EPT so that an attacker cannot simply make arbitrary addresses valid. She, however, might be able to remap the LA of the bitmap to achieve this.
+- Kernel-mode Control-flow Enforcement Technology (CET)
+  - CET tracks valid return addresses into a page called a shadow stack page. This page must be write-protected through EPT for the same reason as above. An attacker could remap a LA of the shadow stack page and fake valid return addresses, however.
+
+Anything marked as read-only in EPT could be an interesting target of the remapping attack. On the above-mentioned Windows setup, [there are several of those regions](https://gist.github.com/tandasat/a4092484c63b0390b45e93140f080795). _(Any volunteers?)_
+
+
 ## Conclusion
 
 In this post, we looked into how EPT can be used to harden the OS kernel against attackers with arbitrary kernel-mode read write primitives, how the remapping attack bypasses one of such hardening mechanisms (eg, KDP), and how HLAT, one of the features Intel VT-rp offers, prevents the attack.
@@ -285,6 +302,7 @@ Intel VT-rp is available on a subset of 12th+ gen Intel processors and is still 
 
 Until HLAT is used and hardware supporting the feature becomes prevalent, the remapping attack will remain to be a relevant exploitation technique. Security software designers and attackers should keep it in mind when considering the use of EPT-based data protection.
 
+
 ### Acknowledgement
 
 - [Andrea Allievi](https://twitter.com/aall86) for [Alder Lake and the new Intel Features](https://www.andrea-allievi.com/blog/alder-lake-and-the-new-intel-features/), as well as some discussions with me (that are more relevant to the part 2).
@@ -292,6 +310,7 @@ Until HLAT is used and hardware supporting the feature becomes prevalent, the re
 
 
 ### Notes
+
 *1: If you tamper with `ci.dll` in the VTL0 and force it to load an unsigned driver, the secure kernel injects NMI and crashes the system. This is the call stack of that situation.
 ```
 0: kd> k
