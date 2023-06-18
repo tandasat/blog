@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Intel VT-rp with examples - Part 1. HLAT"
+title:  "Intel VT-rp with examples - Part 1. Remapping attack and HLAT"
 ---
 - [Security enhancement with extended page tables](#security-enhancement-with-extended-page-tables)
   - [Bypassing KDP by the remapping attack](#bypassing-kdp-by-the-remapping-attack)
