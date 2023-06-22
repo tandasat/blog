@@ -1,15 +1,15 @@
 ---
 layout: post
-title:  "Intel VT-rp with examples - Part 1. Remapping attack and HLAT"
+title: "Intel VT-rp with examples - Part 1. Remapping attack and HLAT"
 ---
 - [Security enhancement with extended page tables](#security-enhancement-with-extended-page-tables)
-  - [Bypassing KDP by the remapping attack](#bypassing-kdp-by-the-remapping-attack)
+  - [Bypassing KDP with the remapping attack](#bypassing-kdp-with-the-remapping-attack)
   - [Demo - making `ci!g_CiOptions` zero under KDP](#demo---making-cig_cioptions-zero-under-kdp)
 - [Intel VT-rp](#intel-vt-rp)
   - [HLAT and the remapping attack](#hlat-and-the-remapping-attack)
   - [Demo - protecting `ci!g_CiOptions` with HLAT](#demo---protecting-cig_cioptions-with-hlat)
   - [Availability](#availability)
-  - [Further applications](#further-applications)
+  - [Bypassing kernel CFG and CET](#bypassing-kernel-cfg-and-cet)
 - [Conclusion](#conclusion)
   - [Acknowledgement](#acknowledgement)
   - [Notes](#notes)
@@ -29,7 +29,7 @@ The below diagram illustrates how a linear address is translated into a physical
 ![](/blog/img/posts/2023-06-01/ept_paging.png)
 _(LA: linear address, GPA: guest physical address, PA: physical address)_
 
-Because a guest cannot tamper with this mechanism even with the kernel privileges, a hypervisor can use it to protect the OS kernel from a kernel-mode exploit by making sensitive kernel-mode code and data non-writable at the EPT level, for example. This way, even if an attacker gains arbitrary kernel-mode read and write primitives, she cannot to corrupt the sensitive code or data.
+Because a guest cannot tamper with this mechanism even with the kernel privileges, a hypervisor can use it to protect the OS kernel from a kernel-mode exploit by making sensitive kernel-mode code and data non-writable at the EPT level, for example. This way, even if an attacker gains arbitrary kernel-mode read and write primitives, she cannot corrupt the sensitive code or data.
 
 This diagram shows that code remains non-writable even if an attacker changes the permission in the guest paging structures.
 ![](/blog/img/posts/2023-06-01/hvci.png)
@@ -37,7 +37,7 @@ This diagram shows that code remains non-writable even if an attacker changes th
 Windows implements this idea as features called HyperVisor-protected Code Integrity (HVCI) and Kernel Data Protection (KDP). HVCI makes kernel-mode code non-writable, and KDP makes kernel-mode data non-writable through EPT.
 
 
-### Bypassing KDP by the remapping attack
+### Bypassing KDP with the remapping attack
 
 KDP can be bypassed if an attacker has an arbitrary kernel-mode read and write primitive by remapping the protected LA onto another GPA that is still configured to be writable at the EPT level.
 
@@ -171,9 +171,9 @@ Preventing the remapping attack without substantial performance impact is deemed
 Intel VT-rp was introduced with the 12th generation and consists of three features:
 - HLAT: Hypervisor-managed Linear Address Translation
 - PW: Paging write
-- VPW: Verify paging write
+- GPV: Guest-paging verification
 
-Although all of the three work together, we will focus on HLAT in this post since it is the primary component to prevent the remapping attack. For the PW and VPW, stay tuned for the part 2.
+Although all of the three work together, we will focus on HLAT in this post since it is the primary component to prevent the remapping attack. For the PW and GPV, stay tuned for the part 2.
 
 
 ### HLAT and the remapping attack
@@ -281,17 +281,17 @@ As to the software-side, as far as I am know, none of major hypervisors includin
 AMD does not offer any equivalent features.
 
 
-### Further applications
+### Bypassing kernel CFG and CET
 
-Given the low availability of the feature, the remapping attack will remain a relevant exploitation technique, and it is worth mentioning the potential uses of the attack to bypass modern security constructs.
+Given the low availability of the feature, the remapping attack will remain a relevant exploitation technique, and it is worth mentioning some potential use of the attack to bypass modern security constructs.
 
 For example,
 - Kernel-mode Code Flow Guard (CFG)
   - Windows maintains a bitmap that indicates valid destinations of indirect calls. For CFG to be effective against kernel-mode exploits, this bitmap is write-protected through EPT so that an attacker cannot simply make arbitrary addresses valid. She, however, might be able to remap the LA of the bitmap to achieve this.
 - Kernel-mode Control-flow Enforcement Technology (CET)
-  - CET tracks valid return addresses into a page called a shadow stack page. This page must be write-protected through EPT for the same reason as above. An attacker could remap a LA of the shadow stack page and fake valid return addresses, however.
+  - CET tracks valid return addresses into a page called a shadow stack page. This page must be write-protected through EPT for the same reason as above. An attacker might be able remap the LA of the shadow stack page and fake valid return addresses, however.
 
-Anything marked as read-only in EPT could be an interesting target of the remapping attack. On the above-mentioned Windows setup, [there are several of those regions](https://gist.github.com/tandasat/a4092484c63b0390b45e93140f080795). _(Any volunteers?)_
+Anything marked as read-only in EPT could be an interesting target of the remapping attack. On the above-mentioned Windows setup, [there are several such regions](https://gist.github.com/tandasat/a4092484c63b0390b45e93140f080795). _(Any volunteers?)_
 
 
 ## Conclusion
@@ -335,3 +335,8 @@ Until HLAT is used and hardware supporting the feature becomes prevalent, the re
 
 *2: The only difference between traditional paging and HLAT paging is the treatment of bit[11] in the paging structures called “Restart” bit. During HLAT paging, when this bit is encountered, HLAT paging is aborted and the traditional paging takes place as if HLAT was disabled. This allows enabling HLAT paging only for select pages as shown below.
 ![](/blog/img/posts/2023-06-01/restart.png)
+
+
+----
+
+_Found this post interesting? We offer a training course about the Intel virtualization technology. [Check out the course syllabus](https://tandasat.github.io/)._
