@@ -13,7 +13,7 @@ title: "Intel VT-rp - Part 1. Remapping attack and HLAT"
   - [Acknowledgement](#acknowledgement)
   - [Notes](#notes)
 
-This post introduces Intel VT-rp -- what it is, how it works, and why it was invented, with [a sample hypervisor](https://github.com/tandasat/Hello-VT-rp) and example scenarios. This is the first part of a 2 posts-series, focusing on Hypervisor-managed Linear Address Translation, HLAT, one of the features VT-rp provides.
+This post introduces Intel VT-rp -- what it is, how it works, and why it was invented, with [a sample hypervisor](https://github.com/tandasat/Hello-VT-rp/tree/part1) and example scenarios. This is the first part of a 2 posts-series, focusing on Hypervisor-managed Linear Address Translation, HLAT, one of the features VT-rp provides.
 
 We use Windows as an example environment to discuss exploitation techniques and scenarios, but the same principle applies to any other operating system.
 
@@ -220,7 +220,7 @@ This makes the remapping attack no-op, because even if the guest-managed paging 
 
 ### Demo - protecting `ci!g_CiOptions` with HLAT
 
-Let us test this with a [custom hypervisor that enables HLAT](https://github.com/tandasat/Hello-VT-rp). The steps of the demo are as follows:
+Let us test this with a [custom hypervisor that enables HLAT](https://github.com/tandasat/Hello-VT-rp/tree/part1). The steps of the demo are as follows:
 1. Load the custom hypervisor and boot Windows on top of it
 2. Locate a linear address and a PTE for `ci!g_CiOptions`
 3. Activate HLAT and protect translation for `ci!g_CiOptions`
