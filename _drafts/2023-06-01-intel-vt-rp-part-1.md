@@ -2,7 +2,7 @@
 layout: post
 title: "Intel VT-rp - Part 1. Remapping attack and HLAT"
 ---
-- [Security enhancement with extended page tables](#security-enhancement-with-extended-page-tables)
+- [EPT-based security and an attack against it](#ept-based-security-and-an-attack-against-it)
   - [Bypassing KDP with the remapping attack](#bypassing-kdp-with-the-remapping-attack)
   - [Demo - making `ci!g_CiOptions` zero under KDP](#demo---making-cig_cioptions-zero-under-kdp)
 - [Intel VT-rp](#intel-vt-rp)
@@ -18,9 +18,9 @@ This post introduces Intel VT-rp -- what it is, how it works, and why it was inv
 We use Windows as an example environment to discuss exploitation techniques and scenarios, but the same principle applies to any other operating system.
 
 
-## Security enhancement with extended page tables
+## EPT-based security and an attack against it
 
-_(Skip this section if you are familiar with EPT, HVCI, and KDP)_
+_([Skip this section](#bypassing-kdp-with-the-remapping-attack) if you are familiar with EPT, HVCI, and KDP)_
 
 Extended page table, EPT, is an Intel implementation of [Second Level Address Translation](https://en.wikipedia.org/wiki/Second_Level_Address_Translation), which allows a hypervisor to control memory access by a guest by adding one more address translation step that cannot be tampered with by the guest.
 
