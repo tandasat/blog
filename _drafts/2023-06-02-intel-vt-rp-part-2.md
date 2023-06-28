@@ -3,7 +3,7 @@ layout: post
 title: "Intel VT-rp - Part 2. Paging Write and Guest-Paging Verification"
 ---
 - [Paging Write (PW)](#paging-write-pw)
-  - [What protects the hypervisor-managed paging structures?](#what-protects-the-hypervisor-managed-paging-structures)
+  - [Protecting the hypervisor-managed paging structures](#protecting-the-hypervisor-managed-paging-structures)
   - [PW as performance optimization](#pw-as-performance-optimization)
   - [Demo](#demo)
 - [Guest-Paging Verification (GPV)](#guest-paging-verification-gpv)
@@ -22,7 +22,7 @@ For hypervisor-managed linear address translation (HLAT), please refer to the pa
 
 ## Paging Write (PW)
 
-### What protects the hypervisor-managed paging structures?
+### Protecting the hypervisor-managed paging structures
 
 The hypervisor-managed paging structures must be tamper resilient against a guest to enforce LA -> GPA translation. If the guest could modify the paging structures used by HLAT, there would be no point of using HLAT. For the hypervisor-managed paging structures to be tamper resilient, they have configured as read-only with EPT. The below illustrates this setup.
 
@@ -116,7 +116,7 @@ VT-rp mitigates only a subset of exploitation techniques, and other mitigation t
 - SMEP: If a user-mode page is executable in kernel-mode, an attacker can generate and execute her shell-code in user-mode pages, where W^X is usually not enforced.
 - Kernel-mode code flow integrity: If either forward or backward code flow is not protected through CFG and CET, an attacker can replace a function pointer or perform ROP to carry out desired operations.
 
-Additionally, all of those configurations must be locked (protected) by a hypervisor. It is substantial work that is challenging to do without any bugs.
+Additionally, all of those configurations must be locked (protected) by a hypervisor. If we think about securing hypervisor itself, we need to add more to the list, eg, DRTM. It is substantial work that is challenging to do without any bugs.
 
 
 ## Conclusion
