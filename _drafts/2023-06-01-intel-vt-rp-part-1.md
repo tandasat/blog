@@ -99,7 +99,7 @@ We use `livekd` and `DBUtilDrv2.Sys`, one of the vulnerable drivers that are not
     fffff844`49cd9e70 cc              int     3
     hvext loaded. Execute !hvext_help [command] for help.
 
-    kd> !pte 0x11ceaa000
+    kd> !ept_pte 0x11ceaa000
         (...)    PTe at 0x11b49a550
         (...)    contains 0x1000011ceaa531
         (...)    pfn 0x11ceaa U---R
@@ -211,7 +211,7 @@ def should_do_hlat_paging(la):
         is_in_range(la, hlat_prefix_size_vmcs())
     )
 ```
-Notice that (1) when HLAT is enabled and the given LA is within a range specified by the HLAT prefix VMCS, (2) the processor locates PML4 through HLATP, instead of the guest CR3. (3) The layout of the hypervisor-managed paging structures and the process of HLAT paging is almost identical to the traditional paging structure and paging (<a name="body2">[*2](#note2)</a>).
+Notice that (1) when HLAT is enabled and the given LA is within a range specified by the HLAT prefix size VMCS, (2) the processor locates PML4 through HLATP, instead of the guest CR3. (3) The layout of the hypervisor-managed paging structures and the process of HLAT paging is almost identical to the traditional paging structure and paging (<a name="body2">[*2](#note2)</a>).
 
 This makes the remapping attack no-op, because even if the guest-managed paging structures (or the guest CR3) is modified, those will not be used. LA -> GPA translation is done through the hypervisor-managed paging structures which remain to translate the LA to the intended GPA.
 
