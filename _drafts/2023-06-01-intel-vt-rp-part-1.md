@@ -1,11 +1,11 @@
 ---
 layout: post
-title: "Intel VT-rp - Part 1. Remapping attack and HLAT"
+title: "Intel VT-rp with demos - Part 1. remapping attack and HLAT"
 ---
 - [EPT-based security and an attack against it](#ept-based-security-and-an-attack-against-it)
   - [Bypassing KDP with the remapping attack](#bypassing-kdp-with-the-remapping-attack)
   - [Demo - making `ci!g_CiOptions` zero under KDP](#demo---making-cig_cioptions-zero-under-kdp)
-- [Intel VT-rp](#intel-vt-rp)
+- [Intel VT Redirect Protection (VT-rp)](#intel-vt-redirect-protection-vt-rp)
   - [HLAT and the remapping attack](#hlat-and-the-remapping-attack)
   - [Demo - protecting `ci!g_CiOptions` with HLAT](#demo---protecting-cig_cioptions-with-hlat)
   - [Availability](#availability)
@@ -13,7 +13,7 @@ title: "Intel VT-rp - Part 1. Remapping attack and HLAT"
   - [Acknowledgement](#acknowledgement)
   - [Notes](#notes)
 
-This post introduces Intel VT-rp -- what it is, how it works, and why it was invented, with [a sample hypervisor](https://github.com/tandasat/Hello-VT-rp/) and example scenarios. This is the first part of a 2 posts-series, focusing on Hypervisor-managed Linear Address Translation, HLAT, one of the features VT-rp provides.
+This post introduces Intel VT Redirect Protection (VT-rp) -- what it is, how it works, and why it was invented, with [a sample hypervisor](https://github.com/tandasat/Hello-VT-rp/) and example scenarios. This is the first part of a 2 posts-series, focusing on Hypervisor-managed Linear Address Translation, HLAT, one of the features VT-rp provides.
 
 We use Windows as an example environment to discuss exploitation techniques and scenarios, but the same principle applies to any other operating system.
 
@@ -167,9 +167,9 @@ Instead, it is more interesting to think about new targets of this attack. Takin
 Really, anything marked as read-only in EPT could be an interesting target of the remapping attack. On the above-mentioned Windows setup, [there are several such regions](https://gist.github.com/tandasat/a4092484c63b0390b45e93140f080795).
 
 
-## Intel VT-rp
+## Intel VT Redirect Protection (VT-rp)
 
-Preventing the remapping attack without substantial performance impact is deemed unachievable. A hypervisor could make the guest paging structures read-only and inspect each write operation, but that incurs a non-negligible performance impact due to frequent VM-exit. Hence, Intel came up with a processor extension branded as Intel VT-rp, redirect protection.
+Preventing the remapping attack without substantial performance impact is deemed unachievable. A hypervisor could make the guest paging structures read-only and inspect each write operation, but that incurs a non-negligible performance impact due to frequent VM-exit. Hence, Intel came up with a processor extension branded as Intel VP Redirect Protection (VT-rp).
 
 Intel VT-rp was introduced with the 12th generation and consists of three features:
 - HLAT: Hypervisor-managed Linear Address Translation
