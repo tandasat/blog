@@ -16,7 +16,7 @@ title: "Intel VT-rp - Part 2. Paging Write and Guest-Paging Verification"
   - [Notes](#notes)
 
 
-This is the 2nd part of the series about the Intel VT-rp, redirection protection, technology. This post focuses on two of its features: paging write (PW) and guest-paging verification (GPV), and an exploitation technique can be prevented with them. We will also discuss how other protection mechanisms complement Intel VT-rp to protect the system from kernel-mode exploits.
+This is the 2nd part of the series about the Intel VT Redirection Protection (VT-rp) technology. This post focuses on two of its features: paging write (PW) and guest-paging verification (GPV), and an exploitation technique can be prevented with them. We will also discuss how other protection mechanisms complement Intel VT-rp to protect the system from kernel-mode exploits.
 
 For hypervisor-managed linear address translation (HLAT), please refer to the part 1.
 
@@ -28,12 +28,12 @@ The hypervisor-managed paging structures must be tamper resilient against a gues
 
 _(insert an illustration showing its permissions, along with guest-managed paging structures)_
 
-This can cause extra VM-exit during HLAT paging because the processor may attempt to set "Accessed" and "Dirty" bits in the paging structures as needed. While this is done by hardware, it is still subject to EPT permissions.
+This can cause extra VM-exit during HLAT paging because the processor may attempt to set "accessed" and "dirty" bits in the paging structures as needed. While this is done by hardware, it is still subject to EPT permissions.
 
 
 ### PW as performance optimization
 
-To avoid those extra VM-exits, a hypervisor can set the "paging-write access" bit in the EPT entries that correspond to the hypervisor-managed paging structures. When this bit is set, write to "Accessed" and "Dirty" bits during paging bypasses EPT permissions.
+To avoid those extra VM-exits, a hypervisor can set the "paging-write access" bit in the EPT entries that correspond to the hypervisor-managed paging structures. When this bit is set, write to "accessed" and "dirty" bits during paging bypasses EPT permissions.
 
 ![](/blog/img/posts/2023-06-02/eptpte_format.png)
 
@@ -42,17 +42,22 @@ _(insert illustration showing PW=1 in EPT PTe)_
 
 ### Demo
 
-Let us observe this behaviour on the UEFI shell. We will:
+Let us observe this behaviour on the UEFI shell.
 
-1. Enable write-protection for the hypervisor-managed paging structures via a hypercall
-2. Enable HLAT for LA 0x20000
-3. Confirm that EPT violation occurs
-4. Redo the above with PW bit in the EPT PTe and confirm EPT violation does not occur
+First, let us make the hypervisor-managed paging structures read-only with EPT via hypercall `1`, then, enable HLAT for LA 0x200000 via hypercall `0`. This immediately causes VM-exit and panic as shown below.
+
+![](/blog/img/posts/2023-06-02/pw_without_pw.jpg)
+
+This is because the processor attempted to set either the "accessed" or "dirty" bit in the hypervisor-managed paging structures, which is read-only. Next, let us set the "paging-write access" bit in the EPT entry via hypercall `2`.
+
+![](/blog/img/posts/2023-06-02/pw_with_pw.jpg)
+
+There is no VM-exit due to the "accessed" or "dirty" bit write this time.
 
 
 ## Guest-Paging Verification (GPV)
 
-Guest-Paging Verification (GPV) is a mechanism to enforce that a given GPA can only be accessed through an indented LA. In the below diagram, access (a) is allowed but (b) is not.
+Guest-Paging Verification (GPV) is a mechanism to enforce that a given GPA is accessed only through an indented LA. In the below diagram, access (a) is allowed but (b) is not.
 
 _(insert illustration showing two path. normal and aliased)_
 
@@ -82,19 +87,25 @@ The type of attack prevented by GPV is called "aliasing". When an attacker has a
 
 _(Insert illustration similar to the above one)_
 
-This attack would be detected with GPV as access to the GPA through the aliased LA involves another paging structures. The hypervisor could set "paging-write access" bits only for the paging structures that would be used for the original LA.
+This attack would be detected with GPV as access to the GPA through the aliased LA involves another paging structures. The hypervisor could set the "paging-write access" bits only for the paging structures that would be used for the original LA.
 
 
 ### Demo
 
+Let us prevent the aliasing attack against GPA 0x200000 with GPV.
 
-- Enable write-protection for hv managed paging structures
-- Enable HLAT for 0x20000
-- Set PW bit in the EPT PTe
-- Set VPW bit in the EPT PTes
-- Alias 0x20000
-- Access the alias
-  - Receive EPT violation
+First, we enable HLAT to make sure the GPA is accessed through an intended permission using hypercall `0`. Next, using hypercall `3`, we enable GPV for the GPA to disallow access by default, and then, allow access through the hypervisor-managed paging structures exclusively, by setting the "paging-write access" bit into the EPT entries that correspond to the hypervisor-managed paging structures.
+
+![](/blog/img/posts/2023-06-02/gpv_setup.jpg)
+
+Let us alias GPA 0x200000 with the `alias` command. In this demo, LA 0x46200000 now translates to GPA 0x200000. Access to LA 0x46200000 causes VM-exit and panic as shown below.
+
+![](/blog/img/posts/2023-06-02/gpv_panic.jpg)
+
+This is because LA 0x46200000 was translated to GPA 0x200000 using the paging structures which is not marked as
+"ok" with the "paging-write access" bit in the corresponding EPT entries. If the GPA 0x200000 were accessed through an original LA, that would have been successful as the LA would be translated through the paging structures that are marked as "ok" (in this case, the hypervisor-managed paging structures).
+
+Note that GPV does not require HLAT to be enabled. That is, a hypervisor can set the "paging-write access" bits for EPT entries that correspond to the guest-managed paging structures. This would enforce that a given GPA is accessed through an intended LA but would not enforce permissions as the guest would be free to change the permission bits in the guest-managed paging structures. For this reason, the author thinks the primary use of GPV is with HLAT as done in the demo.
 
 
 ## Discussions

@@ -250,10 +250,9 @@ We use the same setup except:
 
 3. Activate HLAT and protect translation for `ci!g_CiOptions`
 
-    We use the `client` executable in the same repository. This program takes a linear address to protect with HLAT and issues a hypercall `0` to ask the hypervisor to do it.
+    We use the `client` executable in the same repository to protect a linear address with HLAT via hypercall `0`.
     ```
     > D:\client.exe 0 0xfffff80227dd2004
-    VMCALL(0, 0xfffff80227dd2004, 0x0, 0x0) => 0
     ```
     In our implementation, the hypervisor builds hypervisor-managed paging structures by copying the current guest-managed paging structures (which are not yet tampered with).
 
