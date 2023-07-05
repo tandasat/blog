@@ -173,7 +173,7 @@ Preventing the remapping attack without substantial performance impact is deemed
 
 Intel VT-rp was introduced with the 12th generation and consists of three features:
 - HLAT: Hypervisor-managed Linear Address Translation
-- PW: Paging write
+- PW: Paging-write
 - GPV: Guest-paging verification
 
 Although all of the three work together, we will focus on HLAT in this post since it is the primary component to prevent the remapping attack. For the PW and GPV, stay tuned for the part 2.
