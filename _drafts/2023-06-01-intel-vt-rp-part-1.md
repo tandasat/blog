@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Intel VT-rp with demos - Part 1. remapping attack and HLAT"
+title: "Intel VT-rp - Part 1. remapping attack and HLAT"
 ---
 - [EPT-based security and an attack against it](#ept-based-security-and-an-attack-against-it)
   - [Bypassing KDP with the remapping attack](#bypassing-kdp-with-the-remapping-attack)
