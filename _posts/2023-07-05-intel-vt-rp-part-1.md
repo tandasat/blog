@@ -28,7 +28,7 @@ The below diagram illustrates how a linear address is translated into a physical
 ![](/blog/img/posts/2023-07-05/ept_paging.png)
 _(LA: linear address, GPA: guest physical address, PA: physical address)_
 
-Because a guest cannot tamper with this mechanism even with the kernel privileges, a hypervisor can use it to protect the OS kernel from a kernel-mode exploit by making sensitive kernel-mode code and data non-writable at the EPT level, for example. This way, even if an attacker gains arbitrary kernel-mode read and write primitives, she cannot corrupt the sensitive code or data.
+Because a guest cannot tamper with this mechanism even with the kernel privileges, a hypervisor can use it to protect the OS kernel from a kernel-mode exploit by making sensitive kernel-mode code and data non-writable at the EPT level. This way, even if an attacker gains arbitrary kernel-mode write primitives, she cannot corrupt the sensitive code or data.
 
 This diagram shows that code remains non-writable even if an attacker changes the permission in the guest paging structures.
 ![](/blog/img/posts/2023-07-05/hvci.png)
@@ -38,12 +38,12 @@ Windows implements this idea as features called HyperVisor-protected Code Integr
 
 ### Bypassing KDP with the remapping attack
 
-KDP can be bypassed if an attacker has an arbitrary kernel-mode read and write primitive by remapping the protected LA onto another GPA that is still configured to be writable at the EPT level.
+If an attacker has an arbitrary kernel-mode read and write primitive, KDP can be bypassed by remapping the protected LA onto another GPA that is still configured to be writable at the EPT level.
 
 The below illustration shows permissions for sensitive data protected by KDP.
 ![](/blog/img/posts/2023-07-05/kdp.png)
 
-As shown below, to modify the contents of the sensitive data, an attacker can (1) create a copy of the data, (2) modify the contents of the copy, then (3) update the guest paging structures of the protected LA to point to the modified copy. With this, (4) when the protected LA is read, the modified contents are read instead, bypassing KDP. This method is [called "remapping"](https://kvmforum2020.sched.com/event/eE4F) or page swapping.
+As shown below, to modify the contents of the sensitive data, an attacker can (1) create a copy of the data, (2) modify the contents of the copy, then (3) update the guest paging structures of the protected LA to point to the modified copy. With this, (4) when the protected LA is read, the modified contents are read instead. This method is [called "remapping"](https://kvmforum2020.sched.com/event/eE4F) or page swapping.
 ![](/blog/img/posts/2023-07-05/remapping.png)
 
 This is a well-understood limitation that is explicitly called out by Microsoft and further discussed [by](https://www.fortinet.com/blog/threat-research/driver-signature-enforcement-tampering) [several](https://datafarm-cybersecurity.medium.com/code-execution-against-windows-hvci-f617570e9df0) [others](https://lore.kernel.org/all/20230505152046.6575-1-mic@digikod.net/). Here is the quote from the [Microsoft article introducing KDP](https://www.microsoft.com/en-us/security/blog/2020/07/08/introducing-kernel-data-protection-a-new-platform-security-technology-for-preventing-data-corruption/).
@@ -162,7 +162,7 @@ At this point, we effectively modified the contents of the variable that is supp
 
 Important to note that making `ci!g_CiOptions` zero under this setup (ie, HVCI enabled) does not let you load an unsigned driver. The secure kernel still performs its own certificate check, detects the issue, and bug checks the system (<a name="body1">[*1](#note1)</a>).
 
-Instead, it is more interesting to think about new targets of this attack. Taking kernel-mode Code Flow Guard (CFG) as an example, Windows maintains the bitmap that indicates valid destinations of indirect calls. For CFG to be effective against kernel-mode exploits, this bitmap is write-protected through EPT. An attacker, however, might be able to remap the LA of the bitmap to a new GPA to make her shell-code valid destination. Another approach is replacing a sensitive function pointers as demonstrated in [Code Execution against Windows HVCI](https://datafarm-cybersecurity.medium.com/code-execution-against-windows-hvci-f617570e9df0) by [Worawit](https://twitter.com/sleepya_).
+Instead, it is more interesting to think about new targets of this attack. For example, Windows maintains the bitmap that indicates valid destinations of indirect calls for kernel-mode Code Flow Guard (kCFG). For kCFG to be effective against kernel-mode exploits, this bitmap is write-protected through EPT. An attacker, however, might be able to remap the LA of the bitmap to a new GPA to make her shell-code valid destination. Another approach is replacing a sensitive function pointers as demonstrated in [Code Execution against Windows HVCI](https://datafarm-cybersecurity.medium.com/code-execution-against-windows-hvci-f617570e9df0) by [Worawit](https://twitter.com/sleepya_).
 
 Really, anything marked as read-only in EPT could be an interesting target of the remapping attack. On the above-mentioned Windows setup, [there are several such regions](https://gist.github.com/tandasat/a4092484c63b0390b45e93140f080795).
 
@@ -172,7 +172,7 @@ Really, anything marked as read-only in EPT could be an interesting target of th
 Preventing the remapping attack without substantial performance impact is deemed unachievable. A hypervisor could make the guest paging structures read-only and inspect each write operation, but that incurs a non-negligible performance impact due to frequent VM-exit. Hence, Intel came up with a processor extension branded as Intel VP Redirect Protection (VT-rp).
 
 Intel VT-rp was introduced with the 12th generation and consists of three features:
-- HLAT: Hypervisor-managed Linear Address Translation
+- HLAT: Hypervisor-managed linear address translation
 - PW: Paging-write
 - GPV: Guest-paging verification
 
@@ -270,7 +270,7 @@ We use the same setup except:
     0xfffff80227dd2004  00000006
     ```
 
-    Notice that the write operation was successful, but the value of `ci!g_CiOptions` was unchanged. This is because HLAT paging is active for this LA. The hypervisor-managed paging structure was used instead of the tampered guest-managed paging structure, which translated the LA to the original GPA. This way, the hypervisor can enforce LA -> GPA translation without having to intercept write operations against the guest paging structures.
+    Notice that the write operation was successful, but the value of `ci!g_CiOptions` was unchanged. This is because HLAT paging is active for this LA, and the hypervisor-managed paging structure was used instead of the tampered guest-managed paging structure. This way, the hypervisor can enforce LA -> GPA translation without having to intercept write operations against the guest paging structures.
 
 ![](/blog/img/posts/2023-07-05/totally_vpro.jpg)
 _(Protection in place)_
