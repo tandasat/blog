@@ -30,7 +30,7 @@ Throughout this post, we will use following acronyms:
 
 ### Protecting the hypervisor-managed paging structures
 
-As discussed in part 1 of this series, HLAT employs a new set of paging structures managed by a hypervisor (instead of the guest OS) to "lock" translation of a given LA. The hypervisor-managed paging structures must be tamper resilient against a guest; otherwise, there would be no point in using HLAT.
+As discussed in part 1 of this series, HLAT employs a new set of paging structures managed by a hypervisor to "lock" translation of desired LAs. The hypervisor-managed paging structures must be tamper resilient against a guest; otherwise, there would be no point in using HLAT.
 
 For them to be tamper resilient, they have to be marked as read-only with EPT. The below illustrates this setup.
 
@@ -83,6 +83,8 @@ To take a closer look, let us remind ourselves that, to translate a LA to PA, th
 2. Then, LA (1) is translated to GPA
 3. Finally, GPA (2) is translated to PA with another set of EPT PML4e, PDPTe, PDe and PTe
 
+![](/blog/img/posts/2023-06-02/translation.png)
+
 A process called guest-paging verification steps in when the "verify guest paging" (VGP) bit is set in EPT PTe appeared in (3) above. When this happens, the processor checks that all leaf EPT entries appeared in (1.1) ~ (1.3) have the PWA bit. If not, EPT violation VM-exit occurs.
 
 ![](/blog/img/posts/2023-06-02/eptpte_format_vgp.png)
@@ -95,7 +97,7 @@ The below illustration depicts this.
 2. the processor looks at the paging structures referenced during LA -> GPA translation, and
 3. makes sure the GPAs of the paging structures are marked as PWA=1 in EPT.
 
-Like (2') and (3') above, if the processor encounters an EPT entry that is not marked as PWA=1, EPT violation VM-exit occurs. This mechanism allows an hypervisor to enforce that a given GPA is accessed only through an indented LA and prevent the aliasing attack (<a name="body2">[*2](#note2)</a>).
+Like (2') and (3') above, if the processor encounters an EPT entry that is not marked as PWA=1, EPT violation VM-exit occurs. This mechanism allows an hypervisor to enforce that a given GPA is accessed only through an intended LA and prevent the aliasing attack (<a name="body2">[*2](#note2)</a>).
 
 
 ### Demo
@@ -142,16 +144,18 @@ Additionally, those configurations must be locked (protected) by a hypervisor. I
 
 In part 2, we looked into two of the features Intel VT-rp offered: paging-write (PW) and guest-paging verification (GPV). Specifically, how PW helped protect the hypervisor-managed paging structures efficiently and how GPV can be used to detect the aliasing attack in combination with PW.
 
-The addition of Intel VT-rp is one of the latest examples of how processors and hypervisors evolve and play significant roles in the security scenes. It is also interesting to think about how many machines lack some of those protections, given that it was only in late 2020 when CET was released with Intel 11th gen and AMD Ryzen 3 (<a name="body4">[*4](#note4)</a>).
+The addition of Intel VT-rp is one of the latest examples of how processors and hypervisors evolve and play significant roles in the security scenes. It is also interesting to think about how many machines lack some of those protections, given that it was only in late 2020 when Intel CET was released with 11th gen and AMD shadow-stack was released with Ryzen 3 (<a name="body4">[*4](#note4)</a>).
 
 
 ### Notes
 
 <a name="note1">*1</a> ([🔙](#body1)): The hypervisor could make part of guest-managed paging structures read-only and PWA=1 with EPT. It would "lock" the translation of a given LA and archive the same as HLAT does. PW might be a better option than HLAT if the goal is to make part of the paging structures read-only.
 
-<a name="note2">*2</a> ([🔙](#body2)): Although it is explicitly explained by an Intel engineer that [preventing the aliasing attack is one of the motivations for GPV](https://kvmforum2020.sched.com/event/eE4F), I am unclear how relevant the attack is in the real-world, as aliasing would be pointless if the GPA is properly protected with EPT. Even if the attacker aliases and accesses the GPA through the aliased LA, page protection will still be enforced by EPT anyway. If anyone knows or thinks of scenarios where the aliasing attack is relevant, let me know.
+<a name="note2">*2</a> ([🔙](#body2)): Although it is [explained that preventing the aliasing attack is one of the motivations for GPV](https://kvmforum2020.sched.com/event/eE4F), I am unclear how relevant the attack is in the real-world, as aliasing would be pointless if the GPA is properly protected with EPT. Even if the attacker aliases and accesses the GPA through the aliased LA, page protection will still be enforced by EPT anyway.
 
-<a name="note3">*3</a> ([🔙](#body3)): GPV can be used without HLAT. That is, a hypervisor can set the PWA bits to EPT entries that correspond to the guest-managed paging structures. This would enforce that a given GPA is accessed through an intended LA but would not enforce permissions as the guest would be free to change the permission bits in the guest-managed paging structures. For this reason, the author thinks the primary use of GPV is with HLAT as done in the demo.
+I understand that GPV may be used to enforce permissions by asserting the use of the guest-managed paging structures that are marked as read-only via EPT. However, I do not think of when this is desired over protecting GPA with EPT. If anyone knows or thinks of scenarios where the aliasing attack is important, let me know.
+
+<a name="note3">*3</a> ([🔙](#body3)): GPV can be used without HLAT. That is, a hypervisor can set the PWA bits to EPT entries that correspond to the guest-managed paging structures. This would enforce that a given GPA is accessed through an intended LA but would not enforce permissions as the guest would be free to change the permission bits in the guest-managed paging structures (unless paging structures themselves are set as read-only in EPT). For this reason, I think the primary use of GPV is with HLAT as done in the demo.
 
 <a name="note4">*4</a> ([🔙](#body4)): In fact, Windows does not enable kernel-mode CET by default, even on secured-core PCs as of this writing (10.0.22621). This can be enabled with the `KernelShadowStacks` registry key as mentioned in [Exploit Development: No Code Execution? No Problem! Living The Age of VBS, HVCI, and Kernel CFG](https://connormcgarr.github.io/hvci/) if desired.
 
