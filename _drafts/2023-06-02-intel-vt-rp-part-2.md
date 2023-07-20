@@ -14,9 +14,14 @@ title: "Intel VT-rp - Part 2. paging-write and guest-paging verification"
 - [Conclusion](#conclusion)
   - [Notes](#notes)
 
-This is the 2nd part of the series about the Intel VT Redirection Protection (VT-rp) technology. This post focuses on two of its features: paging write (PW) and guest-paging verification (GPV). We will also discuss how other protection mechanisms complement Intel VT-rp to defend the system against kernel-mode exploits. For hypervisor-managed linear address translation (HLAT), please refer to [part 1](https://tandasat.github.io/blog/2023/07/05/intel-vt-rp-part-1.html).
+This is the 2nd part of the series about the Intel VT Redirection Protection (VT-rp) technology. This post focuses on two of its features: paging write (PW) and guest-paging verification (GPV). We will also discuss how other protection mechanisms complement Intel VT-rp to defend the system against kernel-mode exploits. For hypervisor-managed linear address translation (HLAT), please read [part 1](https://tandasat.github.io/blog/2023/07/05/intel-vt-rp-part-1.html).
 
 As a reminder, source code of the sample hypervisor used in this blog series is available on [GitHub](https://github.com/tandasat/Hello-VT-rp/).
+
+Throughout this post, we will use following acronyms:
+- LA: linear address
+- GPA: guest physical address
+- PA: physical address
 
 ![](/blog/img/posts/2023-06-02/cat.jpg) _(I am intrigued...)_
 
@@ -59,7 +64,7 @@ Next, let us set the PWA bit in the EPT entry using hypercall `2`, then enable H
 
 This does not cause VM-exit due to paging write.
 
-Note that, although the author expects that this feature will be used with HLAT like this example, it can be used for the guest-managed paging structures without enabling HLAT (<a name="body1">[*1](#note1)</a>).
+Note that, although I expect that this feature will be used with HLAT like this example, it can be used for the guest-managed paging structures without enabling HLAT (<a name="body1">[*1](#note1)</a>).
 
 
 ## Guest-paging verification (GPV)
@@ -108,7 +113,7 @@ Then, alias GPA 0x200000 with the `alias` command. In this demo, LA 0x46200000 i
 This is because LA 0x46200000 was translated to GPA 0x200000 using the paging structures which are not marked as
 "ok" with the PWA bit in the corresponding EPT entries. If the GPA 0x200000 were accessed through an original LA, that would have been successful as the LA would be translated through the paging structures that are marked as "ok" (because of the hypercall `3` above).
 
-Finally note that similar to PW, GPV can be used independently of HLAT even though the author thinks the primary use case will be with HLAT (<a name="body3">[*3](#note3)</a>).
+Finally note that similar to PW, GPV can be used independently of HLAT even though I think the primary use case will be with HLAT (<a name="body3">[*3](#note3)</a>).
 
 
 ## Side discussions
@@ -130,7 +135,7 @@ Keep it in mind that VT-rp mitigates only a subset of exploitation techniques, a
 - SMEP: If a user-mode page is executable in kernel-mode, an attacker can generate and execute her shell-code in user-mode pages, where W^X is usually not enforced.
 - Kernel-mode code flow integrity: If forward- or backward-edge code flow is unprotected using CFG and CET, an attacker can replace a function pointer or perform ROP to perform desired operations.
 
-Additionally, those configurations must be locked (protected) by a hypervisor. If we consider securely starting up the hypervisor, we need to combine more technologies. It is substantial work that is challenging to do without any bugs.
+Additionally, those configurations must be locked (protected) by a hypervisor. If we consider securely starting up the hypervisor, we need to combine more technologies. It is substantial work that is challenging to do without any bugs (stay tuned😊).
 
 
 ## Conclusion
@@ -148,7 +153,7 @@ The addition of Intel VT-rp is one of the latest examples of how processors and 
 
 <a name="note3">*3</a> ([🔙](#body3)): GPV can be used without HLAT. That is, a hypervisor can set the PWA bits to EPT entries that correspond to the guest-managed paging structures. This would enforce that a given GPA is accessed through an intended LA but would not enforce permissions as the guest would be free to change the permission bits in the guest-managed paging structures. For this reason, the author thinks the primary use of GPV is with HLAT as done in the demo.
 
-<a name="note4">*4</a> ([🔙](#body4)): In fact, Windows does not enable kernel-mode CET by default, even on secured-core PCs as of this writing (10.0.22621.1848). This can be enabled with the  `KernelShadowStacks` registry key as mentioned in [Exploit Development: No Code Execution? No Problem! Living The Age of VBS, HVCI, and Kernel CFG](https://connormcgarr.github.io/hvci/) if desired.
+<a name="note4">*4</a> ([🔙](#body4)): In fact, Windows does not enable kernel-mode CET by default, even on secured-core PCs as of this writing (10.0.22621). This can be enabled with the `KernelShadowStacks` registry key as mentioned in [Exploit Development: No Code Execution? No Problem! Living The Age of VBS, HVCI, and Kernel CFG](https://connormcgarr.github.io/hvci/) if desired.
 
 
 ----
