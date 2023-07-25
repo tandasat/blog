@@ -24,7 +24,7 @@ _([Skip this section](#bypassing-kdp-with-the-remapping-attack) if you are famil
 
 Extended page table, EPT, is an Intel implementation of [Second Level Address Translation](https://en.wikipedia.org/wiki/Second_Level_Address_Translation), which allows a hypervisor to control memory access by a guest by adding one more address translation step that cannot be tampered with by the guest.
 
-The below diagram illustrates how a linear address is translated into a physical address using ETP.
+The below diagram illustrates how a linear address is translated into a physical address using EPT.
 ![](/blog/img/posts/2023-07-05/ept_paging.png)
 _(LA: linear address, GPA: guest physical address, PA: physical address)_
 
