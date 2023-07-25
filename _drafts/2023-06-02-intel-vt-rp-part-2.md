@@ -67,16 +67,18 @@ This does not cause VM-exit due to paging write.
 
 ## Guest-paging verification (GPV)
 
-The 3rd feature VT-rp provides is guest-paging verification (GPV). It is a mechanism to prevent accessing a given GPA through unintended LAs. For example, in the below diagram, two LAs translate to the same GPA due to aliasing, but access to the GPA through (b) can be detected and prevented using GPV.
+The 3rd feature VT-rp provides is guest-paging verification (GPV), formerly referred to as verify paging-write.
+
+It is a mechanism to prevent accessing a given GPA through unintended LAs. For example, in the below diagram, two LAs translate to the same GPA due to aliasing, but access to the GPA through (b) can be detected and prevented using GPV.
 
 ![](/blog/img/posts/2023-06-02/aliasing.png)
 
-In a nutshell, this works by the processor verifying that all leaf ETP entries used to translate a LA to a GPA set the PWA bit.
+In a nutshell, this works by the processor verifying that all leaf EPT entries used to translate a LA to a GPA set the PWA bit.
 
-To take a closer look, let us remind ourselves that the processor has to access guest-managed paging structures (ie, PML4e, PDPTe, PDe and PTe) on memory to translate a LA to a PA, and that access to each of those requires GPA -> PA translation. Namely,
+To take a closer look, let us remind ourselves that the processor has to access guest-managed paging structures (ie, PML4e, PDPTe, PDe and PTe) on memory to translate a LA to a PA, and that access requires GPA -> PA translation. Namely,
 1. To translate a LA, the processor:
-   1. needs to read PML4e on GPA, which requires EPT PML4e, PDPTe, PDe and PTe to translate it to PA
-   2. needs to read PDPTe on GPA, which requires EPT PML4e, PDPTe, PDe and PTe to translate it to PA
+   1. needs to read PML4e on GPA, which requires translation to PA using EPT PML4e, PDPTe, PDe and PTe
+   2. needs to read PDPTe on GPA, which requires translation to PA using EPT PML4e, PDPTe, PDe and PTe
    3. and so on
 2. Then, LA (1) is translated to GPA
 3. Finally, GPA (2) is translated to PA with another set of EPT PML4e, PDPTe, PDe and PTe
