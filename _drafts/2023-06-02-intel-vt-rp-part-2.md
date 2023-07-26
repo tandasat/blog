@@ -30,9 +30,11 @@ We will use following acronyms throughout this post:
 
 ### Protecting the hypervisor-managed paging structures
 
-As discussed in part 1 of this series, HLAT employs a new set of paging structures rooted from the HLATP VMCS field to "lock" translation of desired LAs. Those paging structures, which we refer to as the hypervisor-managed paging structures, must be tamper resilient against a guest; otherwise, there would be no point in using HLAT.
+As discussed in part 1 of this series, HLAT employs a new set of paging structures rooted from the HLATP VMCS field to "lock" translation of desired LAs.
 
-For them to be tamper resilient, they have to be marked as read-only with EPT. The below illustrates this setup.
+Those paging structures, which we refer to as the hypervisor-managed paging structures, must be tamper resilient against a guest; otherwise, there would be no point in using HLAT. They also have to be accessible from the guest because the HLATP VMCS field holds the GPA of the structures, and the processor needs to be able to read them on the GPA in VMX non-root operation.
+
+For them to be tamper resilient while being exposed to the guest, they may be marked as read-only with EPT. The below illustrates this setup.
 
 ![](/blog/img/posts/2023-06-02/hlat_protected.png)
 
