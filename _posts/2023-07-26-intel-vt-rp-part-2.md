@@ -23,7 +23,7 @@ We will use following acronyms throughout this post:
 - GPA: guest physical address
 - PA: physical address
 
-![](/blog/img/posts/2023-06-02/cat.jpg) _(I am intrigued...)_
+![](/blog/img/posts/2023-07-26/cat.jpg) _(I am intrigued...)_
 
 
 ## Paging-write (PW)
@@ -36,7 +36,7 @@ Those paging structures, which we refer to as the hypervisor-managed paging stru
 
 For them to be tamper resilient while being exposed to the guest, they may be marked as read-only with EPT. The below illustrates this setup.
 
-![](/blog/img/posts/2023-06-02/hlat_protected.png)
+![](/blog/img/posts/2023-07-26/hlat_protected.png)
 
 This can cause extra VM-exit during HLAT paging because the processor attempts to set "accessed" and "dirty" bits in the paging structures as needed. This operation is called "paging write". While this is done by hardware, it is still subject to EPT permissions.
 
@@ -45,9 +45,9 @@ This can cause extra VM-exit during HLAT paging because the processor attempts t
 
 To avoid those extra VM-exits, a hypervisor can set the "paging-write access" (PWA) bit in the EPT entries that correspond to the hypervisor-managed paging structures (<a name="body1">[*1](#note1)</a>). When this bit is set, paging write is allowed regardless of the EPT read/write permission.
 
-![](/blog/img/posts/2023-06-02/eptpte_format_pw.png)
+![](/blog/img/posts/2023-07-26/eptpte_format_pw.png)
 
-![](/blog/img/posts/2023-06-02/pw.png)
+![](/blog/img/posts/2023-07-26/pw.png)
 
 
 ### Demo - read-only paging structures
@@ -56,13 +56,13 @@ Let us observe this behaviour using the custom hypervisor and `uefi_client` on t
 
 First, we make the hypervisor-managed paging structures read-only using hypercall `1`, then, enable HLAT for LA 0x200000 using hypercall `0`. This immediately causes EPT violation VM-exit and panic as shown below.
 
-![](/blog/img/posts/2023-06-02/pw_without_pw.jpg)
+![](/blog/img/posts/2023-07-26/pw_without_pw.jpg)
 
 This is because the processor attempted to perform paging write for the hypervisor-managed paging structures, which were read-only.
 
 Next, let us set the PWA bit in the EPT entry using hypercall `2`, then enable HLAT.
 
-![](/blog/img/posts/2023-06-02/pw_with_pw.jpg)
+![](/blog/img/posts/2023-07-26/pw_with_pw.jpg)
 
 This does not cause VM-exit due to paging write.
 
@@ -73,7 +73,7 @@ The 3rd feature VT-rp provides is guest-paging verification (GPV), formerly refe
 
 It is a mechanism to prevent accessing a given GPA through unintended LAs. For example, in the below diagram, two LAs translate to the same GPA due to aliasing, but access to the GPA through (b) can be detected and prevented using GPV.
 
-![](/blog/img/posts/2023-06-02/aliasing.png)
+![](/blog/img/posts/2023-07-26/aliasing.png)
 
 In a nutshell, this works by the processor verifying that all leaf EPT entries used to translate a LA to a GPA set the PWA bit.
 
@@ -85,15 +85,15 @@ To take a closer look, let us remind ourselves that the processor has to access 
 2. Then, LA (1) is translated to GPA
 3. Finally, GPA (2) is translated to PA with another set of EPT PML4e, PDPTe, PDe and PTe
 
-![](/blog/img/posts/2023-06-02/translation.png)
+![](/blog/img/posts/2023-07-26/translation.png)
 
 A process called guest-paging verification steps in when the "verify guest paging" (VGP) bit is set in EPT PTe appeared in (3) above. When this happens, the processor checks that all leaf EPT entries appeared in (1.1) ~ (1.3) have the PWA bit. If not, EPT violation VM-exit occurs.
 
-![](/blog/img/posts/2023-06-02/eptpte_format_vgp.png)
+![](/blog/img/posts/2023-07-26/eptpte_format_vgp.png)
 
 The below illustration depicts this.
 
-![](/blog/img/posts/2023-06-02/gpv.png)
+![](/blog/img/posts/2023-07-26/gpv.png)
 
 1. If the VGP bit is set in the EPT entry for a GPA being accessed,
 2. the processor looks at the paging structures referenced during LA -> GPA translation, and
@@ -110,11 +110,11 @@ Let us prevent the aliasing attack against GPA 0x200000 with GPV.
 
 First, we enable HLAT using hypercall `0` to make sure the GPA is accessed through intended permission. Next, using hypercall `3`, we enable GPV for the GPA and allow access through the hypervisor-managed paging structures, by setting the PWA bit into the EPT entries corresponding to them.
 
-![](/blog/img/posts/2023-06-02/gpv_setup.jpg)
+![](/blog/img/posts/2023-07-26/gpv_setup.jpg)
 
 Then, we alias GPA 0x200000 with the `alias` command. In this demo, LA 0x46200000 is an alias and translates to GPA 0x200000. Access to LA 0x46200000, however, causes VM-exit and panic as shown below.
 
-![](/blog/img/posts/2023-06-02/gpv_panic.jpg)
+![](/blog/img/posts/2023-07-26/gpv_panic.jpg)
 
 This is because LA 0x46200000 was translated to GPA 0x200000 using the paging structures which are not marked as
 "ok" with the PWA bit in the corresponding EPT entries. If the GPA 0x200000 were accessed through an original LA, that would have been successful as the LA would be translated through the paging structures that are marked as "ok" (because of the hypercall `3` above).
