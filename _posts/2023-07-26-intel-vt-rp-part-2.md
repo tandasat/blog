@@ -14,7 +14,7 @@ title: "Intel VT-rp - Part 2. paging-write and guest-paging verification"
 - [Conclusion](#conclusion)
   - [Notes](#notes)
 
-This is the 2nd part of the series about the Intel VT Redirection Protection (VT-rp) technology. This post focuses on two of its features: paging write (PW) and guest-paging verification (GPV). We will also discuss how other protection mechanisms complement Intel VT-rp to defend the system against kernel-mode exploits. For hypervisor-managed linear address translation (HLAT), please read [part 1](https://tandasat.github.io/blog/2023/07/05/intel-vt-rp-part-1.html).
+This is the 2nd part of the series about the Intel VT Redirection Protection (VT-rp) technology. This post focuses on two of its features: paging write (PW) and guest-paging verification (GPV). We will also discuss how other protection mechanisms complement Intel VT-rp to defend the system against kernel-mode exploits. For hypervisor-managed linear address translation (HLAT), please read [part 1](/blog/2023/07/05/intel-vt-rp-part-1.html).
 
 As a reminder, source code of the sample hypervisor used in this blog series is available on [GitHub](https://github.com/tandasat/Hello-VT-rp/).
 
@@ -137,9 +137,10 @@ Keep it in mind that VT-rp mitigates only a subset of exploitation techniques, a
 
 - W^X guarantee for kernel-mode code: If code is writable, an attacker can generate and execute her shell-code.
 - SMEP: If a user-mode page is executable in kernel-mode, an attacker can generate and execute her shell-code in user-mode pages, where W^X is usually not enforced.
+- MBEC/GMET: If executable permission is not managed for user- and kernel-mode separately, an attacker can generate shell-code in user-mode executable pages, make it kernel-mode to bypass SMEP and execute it.
 - Kernel-mode code flow integrity: If forward- or backward-edge code flow is unprotected using CFG and CET shadow stack, an attacker can replace a function pointer or perform ROP to do desired operations (<a name="body4">[*4](#note4)</a>).
 
-Additionally, configurations of those must be protected by a hypervisor. If we consider securely starting up the hypervisor, we need to combine more technologies. It is substantial work that is challenging to do without any bugs.
+Additionally, configurations of those must be protected by a hypervisor. If we consider securely starting up the hypervisor, we need to combine more technologies. It is substantial and challenging work to do without any bugs or misconfigurations.
 
 
 ## Conclusion
