@@ -13,7 +13,7 @@ title: "Intel VT-rp - Part 1. remapping attack and HLAT"
   - [Acknowledgement](#acknowledgement)
   - [Notes](#notes)
 
-This post introduces Intel VT Redirect Protection (VT-rp) -- what it is, how it works, and why it was invented, with [a sample hypervisor](https://github.com/tandasat/Hello-VT-rp/) and example scenarios. This is the first part of a 2 posts-series, focusing on Hypervisor-managed Linear Address Translation, HLAT, one of the features VT-rp provides.
+This post introduces Intel VT Redirect Protection (VT-rp) -- what it is, how it works, and why it was invented, with [a sample hypervisor](https://github.com/tandasat/Hello-VT-rp/) and example scenarios. This is the first part of a 2 posts-series, focusing on Hypervisor-managed Linear Address Translation, HLAT, one of the features VT-rp provides. For other features, read [part 2](/blog/2023/07/31/intel-vt-rp-part-2.html).
 
 We use Windows as an example environment to discuss exploitation techniques and scenarios, but the same principle applies to any other operating system.
 
@@ -176,7 +176,7 @@ Intel VT-rp was introduced with the 12th generation and consists of three featur
 - PW: Paging-write
 - GPV: Guest-paging verification
 
-Although all of the three work together, we will focus on HLAT in this post since it is the primary component to prevent the remapping attack. For the PW and GPV, stay tuned for the part 2.
+Although all of the three work together, we will focus on HLAT in this post since it is the primary component to prevent the remapping attack. For the PW and GPV, read [part 2](/blog/2023/07/31/intel-vt-rp-part-2.html).
 
 
 ### HLAT and the remapping attack
