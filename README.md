@@ -8,5 +8,5 @@ $ sudo bundle install
 $ cd blog
 $ bundle exec jekyll serve --force_polling
 or
-$ bundle exec jekyll serve --force_polling --drafts
+$ bundle exec jekyll serve --force_polling --drafts --future
 ```
