@@ -327,7 +327,7 @@ Until HLAT is used and hardware supporting the feature becomes prevalent, the re
 0f fffff989`6f8af7c0 fffff802`36fc44b7     nt!IopLoadDriver+0x24b
 ```
 
-<a name="note2">*2</a> ([🔙](#body2)): The only difference between traditional paging and HLAT paging is the treatment of bit[11] in the paging structures called “Restart” bit. During HLAT paging, when this bit is encountered, HLAT paging is aborted and the traditional paging takes place as if HLAT was disabled. This allows enabling HLAT paging only for select pages as shown below.
+<a name="note2">*2</a> ([🔙](#body2)): The only difference between traditional paging and HLAT paging is the treatment of bit[11] in the paging structures called "Restart" bit. During HLAT paging, when this bit is encountered, HLAT paging is aborted and the traditional paging takes place as if HLAT was disabled. This allows enabling HLAT paging only for select pages as shown below.
 ![](/blog/img/posts/2023-07-05/restart.png)
 
 <a name="note3">*3</a> ([🔙](#body3)): Code to set the HALTP VMCS exists in Microsoft Hyper-V but is not exercised. [Andrea Allievi noted in his blog](#acknowledgement) and told me that Microsoft has been actively working on integrating VT-rp.
