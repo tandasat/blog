@@ -70,11 +70,12 @@ dhcp                    No
 isolatedcontext         Yes
 ```
 Then, made sure:
-- Firewall on the host was completely disabled (it can be re-enabled later with exception rules once setup is confirmed).
+- ~~Firewall on the host was completely disabled (it can be re-enabled later with exception rules once setup is confirmed).~~
 - Both the host and target were connected through USB-A ports.
   - On the host, it was fine to use a C-to-A multi-function adapter.
 - BitLocker was disabled. Not sure if this was required, but probably wise to do so anyway.
 
+As far as I tested, it does not need a special USB cable. I was able to establish connection with both [a Datapro debugging cable](https://www.datapro.net/products/usb-3-0-super-speed-a-a-debugging-cable.html) and [a regular cable](https://www.amazon.com/SIIG-SuperSpeed-Cable-Meters-CB-US0212-S1/dp/B0032ANCBO).
 
 ## Winload and tcblaunch debugging
 Once kernel debugging is configured, simply enabling `bootdebug` lets the debugger break-in to Winload.exe and tcblaunch.exe at their startup.
