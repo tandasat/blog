@@ -46,7 +46,7 @@ The rest of the post analyzes [raw data](https://gist.github.com/tandasat/3a60ee
 
 ## Setup
 
-I checked VMCS configurations on Windows 22H2 on the 9th generation Intel processor. The guest partition is Windows 22H2 with Hyper-V configuration version 11.0. HVCI is enabled for the root partition and disabled for the guest partition.
+I checked VMCS configurations on Windows 11 22H2 on the 9th generation Intel processor. The guest partition is Windows 11 22H2 with Hyper-V configuration version 11.0. HVCI is enabled for the root partition and disabled for the guest partition.
 
 
 ## Comparison
